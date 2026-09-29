@@ -1,5 +1,7 @@
 # Code-Knacker Web-Editor
 
+Probiere das Tool hier aus: https://didahero.github.io/codeknacker/
+
 Ein didaktisches Tool zur Erstellung von **Codeknacker-/Mastermind-Spielen** mit frei konfigurierbaren Schwierigkeitsgraden.
 
 Das Tool eignet sich insbesondere für den Unterricht rund um **Kennwortstärke und Schlüsselstärke**. Lernende können spielerisch untersuchen, wie sich die Anzahl möglicher Zeichen bzw. Farben und die Länge eines Codes auf die Schwierigkeit des Knackens auswirken.
