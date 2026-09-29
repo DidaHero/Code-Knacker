@@ -1,6 +1,6 @@
 # Code-Knacker Web-Editor
 
-Probiere das Tool hier aus: https://didahero.github.io/codeknacker/
+Probiere das Tool hier aus: https://didahero.github.io/Code-Knacker/
 
 Ein didaktisches Tool zur Erstellung von **Codeknacker-/Mastermind-Spielen** mit frei konfigurierbaren Schwierigkeitsgraden.
 
