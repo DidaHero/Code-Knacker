@@ -1,4 +1,3 @@
-[README(3).md](https://github.com/user-attachments/files/32790553/README.3.md)
 # Code-Knacker Web-Editor
 
 Ein didaktisches Tool zur Erstellung von **Codeknacker-/Mastermind-Spielen** mit frei konfigurierbaren Schwierigkeitsgraden.
