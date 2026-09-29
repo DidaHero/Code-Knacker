@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Code-Knacker Web-Editor</title>
+<style>
+:root{
+  --bg:#f3f3f3;--card:#fff;--text:#222;--muted:#666;--line:#ddd;--accent:#2563eb;--danger:#dc2626;--ok:#16a34a;
+}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;max-width:1180px;margin:20px auto;padding:20px;background:var(--bg);color:var(--text)}
+.box{background:var(--card);padding:20px;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.15);margin-bottom:20px}
+h1,h2,h3{margin-top:0}.muted{color:var(--muted)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:10px 0}
+label{font-weight:bold}input,select,button{font:inherit}input,select{padding:8px;border:1px solid #bbb;border-radius:8px}input[type="number"]{width:90px}button{border:0;border-radius:9px;padding:10px 14px;cursor:pointer;background:#e5e7eb}button.primary{background:var(--accent);color:white}button.danger{background:var(--danger);color:white}button.ok{background:var(--ok);color:white}button:disabled{opacity:.45;cursor:not-allowed}
+.level{border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0;background:#fafafa}.level.active{outline:3px solid rgba(37,99,235,.25)}
+.previewColumn{display:flex;flex-direction:column;gap:20px}.previewColumn>.box{margin-bottom:0}.colors{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.swatch,.slot,.color{width:46px;height:46px;border-radius:50%;border:2px solid #333}.swatch{position:relative}.swatch input{opacity:0;position:absolute;inset:0;cursor:pointer}.swatch button{position:absolute;right:-8px;top:-8px;border-radius:50%;width:24px;height:24px;padding:0;background:#111;color:#fff;font-size:14px}
+#guess,#palette{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0}.slot{background:#ddd;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;color:#555}.color{border-color:transparent;cursor:pointer}.color:hover{border-color:#000}.gameHint{margin:6px 0 12px}.sectionTitle{font-weight:bold;margin-top:18px}.sectionTitle:first-child{margin-top:0}.attemptHeader,.attempt{display:grid;grid-template-columns:minmax(0,1fr) 90px 140px;gap:12px;align-items:center}.attemptHeader{padding:0 0 6px;border-bottom:2px solid var(--line);font-weight:bold}.attempt{padding:10px 0;border-bottom:1px solid var(--line)}.scoreHead,.scoreVal{text-align:center}.scoreVal{font-weight:bold;font-size:1.05rem}.left{display:flex;align-items:center;gap:15px;min-width:0}.number{font-weight:bold;min-width:90px}.list{display:flex;gap:8px;flex-wrap:wrap}.small{width:28px;height:28px;border-radius:50%;border:1px solid #000}.win{background:#ecfdf5;border:1px solid #86efac;padding:10px;border-radius:10px;margin:10px 0}.hidden{display:none!important}
+textarea{width:100%;min-height:130px;border-radius:10px;border:1px solid #bbb;padding:10px;font-family:ui-monospace,Consolas,monospace}
+@media(max-width:850px){.grid{grid-template-columns:1fr}.attemptHeader,.attempt{grid-template-columns:minmax(0,1fr) 70px 112px;gap:8px}.number{min-width:auto}.left{gap:10px}.small{width:24px;height:24px}.scoreHead{font-size:.9rem}}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Code-Knacker Web-Editor</h1>
+  <p class="muted">Konfiguriere beliebig viele Stufen. Danach exportierst du eine spielbare HTML-Datei ohne Editor.</p>
+  <div class="row">
+    <button class="primary" onclick="downloadPlayerApp()">Spielbare Webanwendung exportieren</button>
+    <button onclick="downloadEditorConfig()">Konfiguration speichern</button>
+    <label><input type="file" id="configFile" accept="application/json" onchange="loadEditorConfig(event)"> Konfiguration laden</label>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="box">
+    <h2>Editor</h2>
+    <div class="row">
+      <button class="ok" onclick="addLevel()">Stufe hinzufügen</button>
+      <button onclick="resetDefaults()">Standard wiederherstellen</button>
+    </div>
+    <div id="levels"></div>
+  </div>
+
+  <div class="previewColumn">
+    <div class="box">
+      <h2>Spiel-Vorschau</h2>
+      <div class="row">
+        <label for="previewLevel">Stufe:</label>
+        <select id="previewLevel" onchange="startGame()"></select>
+        <button onclick="startGame()">Neues Spiel</button>
+      </div>
+      <div id="status" class="muted"></div>
+      <div class="sectionTitle">Ratezeile</div>
+      <p class="gameHint">Klicke die Farben an, um die Farben in die grauen Felder zu platzieren. Klicke ein Feld in der Ratezeile an, um die Farbe zu entfernen.</p>
+      <div id="guess"></div>
+      <div class="sectionTitle">Farbauswahl</div>
+      <div id="palette"></div>
+      <button class="primary" onclick="checkGuess()">Versuch prüfen</button>
+    </div>
+    <div class="box">
+      <h2>Versuche</h2>
+      <div class="attemptHeader"><div></div><div class="scoreHead">Richtig</div><div class="scoreHead">Falsch platziert</div></div>
+      <div id="history"></div>
+    </div>
+  </div>
+</div>
+
+<div class="box">
+  <h2>Export-Code</h2>
+  <p class="muted">Optional: Hier kannst du den zuletzt erzeugten HTML-Code kopieren.</p>
+  <textarea id="exportCode" readonly placeholder="Nach dem Export erscheint hier der HTML-Code."></textarea>
+</div>
+
+<script>
+const defaultPalette=["#ef4444","#3b82f6","#22c55e","#eab308","#a855f7","#f97316","#ec4899","#92400e","#06b6d4","#84cc16","#d946ef","#6b7280"];
+let config={levels:[
+  {name:"Leicht",fields:4,colors:["#ef4444","#3b82f6","#22c55e","#eab308"]},
+  {name:"Mittel",fields:4,colors:["#ef4444","#3b82f6","#22c55e","#eab308","#a855f7","#f97316"]},
+  {name:"Schwer",fields:5,colors:["#ef4444","#3b82f6","#22c55e","#eab308","#a855f7","#f97316","#ec4899","#06b6d4"]}
+]};
+let secret=[],current=[],active=[],fields=4,attempts=0,won=false;
+
+function clamp(n,min,max){return Math.max(min,Math.min(max,Number(n)||min));}
+function sanitizeLevel(l,i){
+  return {name:String(l.name||`Stufe ${i+1}`),fields:clamp(l.fields,1,20),colors:(Array.isArray(l.colors)?l.colors:defaultPalette.slice(0,6)).filter(Boolean).slice(0,30)};
+}
+function sanitizeConfig(){
+  config.levels=(Array.isArray(config.levels)?config.levels:[]).map(sanitizeLevel).filter(l=>l.colors.length>0);
+  if(config.levels.length===0) config.levels=[sanitizeLevel({name:"Standard",fields:4,colors:defaultPalette.slice(0,6)},0)];
+}
+function renderEditor(){
+  sanitizeConfig();
+  const wrap=document.getElementById('levels'); wrap.innerHTML='';
+  config.levels.forEach((level,index)=>{
+    const box=document.createElement('div'); box.className='level';
+    box.innerHTML=`
+      <div class="row">
+        <label>Name <input value="${escapeHtml(level.name)}" oninput="updateLevelName(${index},this.value)"></label>
+        <label>Felder <input type="number" min="1" max="20" value="${level.fields}" onchange="updateFields(${index},this.value)"></label>
+        <button onclick="addColor(${index})">Farbe hinzufügen</button>
+        <button class="danger" onclick="removeLevel(${index})" ${config.levels.length===1?'disabled':''}>Löschen</button>
+      </div>
+      <div class="muted">Farben: ${level.colors.length}</div>
+      <div class="colors" id="colors-${index}"></div>`;
+    wrap.appendChild(box);
+    const colors=box.querySelector(`#colors-${index}`);
+    level.colors.forEach((color,cIndex)=>{
+      const sw=document.createElement('div'); sw.className='swatch'; sw.style.background=color;
+      sw.innerHTML=`<input type="color" value="${color}" onchange="updateColor(${index},${cIndex},this.value)"><button title="Farbe entfernen" onclick="removeColor(${index},${cIndex})" ${level.colors.length===1?'disabled':''}>×</button>`;
+      colors.appendChild(sw);
+    });
+  });
+  renderLevelSelect();
+}
+function renderLevelSelect(){
+  const sel=document.getElementById('previewLevel'); const old=sel.value; sel.innerHTML='';
+  config.levels.forEach((l,i)=>{const o=document.createElement('option');o.value=i;o.textContent=l.name;sel.appendChild(o);});
+  if(config.levels[old]) sel.value=old;
+}
+function updateLevelName(i,v){config.levels[i].name=v||`Stufe ${i+1}`;renderLevelSelect();}
+function updateFields(i,v){config.levels[i].fields=clamp(v,1,20);startGame();renderEditor();}
+function updateColor(i,c,v){config.levels[i].colors[c]=v;startGame();renderEditor();}
+function addColor(i){config.levels[i].colors.push(defaultPalette[config.levels[i].colors.length%defaultPalette.length]);renderEditor();startGame();}
+function removeColor(i,c){if(config.levels[i].colors.length>1){config.levels[i].colors.splice(c,1);renderEditor();startGame();}}
+function addLevel(){config.levels.push({name:`Stufe ${config.levels.length+1}`,fields:4,colors:defaultPalette.slice(0,6)});renderEditor();}
+function removeLevel(i){if(config.levels.length>1){config.levels.splice(i,1);renderEditor();startGame();}}
+function resetDefaults(){config={levels:[{name:"Leicht",fields:4,colors:defaultPalette.slice(0,4)},{name:"Mittel",fields:4,colors:defaultPalette.slice(0,6)},{name:"Schwer",fields:5,colors:defaultPalette.slice(0,8)}]};renderEditor();startGame();}
+
+function startGame(){
+  sanitizeConfig(); const idx=Number(document.getElementById('previewLevel').value)||0; const level=config.levels[idx]||config.levels[0];
+  fields=level.fields; active=[...level.colors]; attempts=0; won=false; secret=[];
+  for(let i=0;i<fields;i++) secret.push(active[Math.floor(Math.random()*active.length)]);
+  current=Array(fields).fill(null); document.getElementById('history').innerHTML='';
+  document.getElementById('status').textContent=`${level.name}: ${fields} Felder, ${active.length} Farben`;
+  renderGuess(); renderPalette();
+}
+function renderGuess(){
+  const g=document.getElementById('guess'); g.innerHTML='';
+  current.forEach((c,i)=>{const d=document.createElement('div');d.className='slot';if(c){d.style.background=c;d.textContent='';}else{d.textContent='leer';}d.onclick=()=>{if(!won){current[i]=null;renderGuess();}};g.appendChild(d);});
+}
+function renderPalette(){
+  const p=document.getElementById('palette'); p.innerHTML='';
+  active.forEach(color=>{const b=document.createElement('button');b.className='color';b.style.background=color;b.title=color;b.onclick=()=>{if(won)return;const free=current.indexOf(null);if(free!==-1){current[free]=color;renderGuess();}};p.appendChild(b);});
+}
+function scoreGuess(secretCode,guess){
+  let exact=0,partial=0,s=[...secretCode],g=[...guess];
+  for(let i=0;i<g.length;i++){if(g[i]===s[i]){exact++;s[i]=null;g[i]=null;}}
+  for(let i=0;i<g.length;i++){if(g[i]===null)continue;const pos=s.indexOf(g[i]);if(pos!==-1){partial++;s[pos]=null;}}
+  return {exact,partial};
+}
+function checkGuess(){
+  if(won){alert('Du hast schon gewonnen. Starte ein neues Spiel.');return;}
+  if(current.includes(null)){alert('Alle Felder füllen.');return;}
+  const guess=[...current]; const {exact,partial}=scoreGuess(secret,guess);
+  attempts++; addAttempt(guess,exact,partial);
+  if(exact===fields){won=true; const div=document.createElement('div');div.className='win';div.textContent='Gewonnen nach '+attempts+' Versuchen!';document.getElementById('history').prepend(div);alert(div.textContent);}
+  current=Array(fields).fill(null); renderGuess();
+}
+function addAttempt(guess,exact,partial){
+  const row=document.createElement('div'); row.className='attempt'; const left=document.createElement('div'); left.className='left';
+  const number=document.createElement('div'); number.className='number'; number.textContent='Versuch '+attempts;
+  const colors=document.createElement('div'); colors.className='list';
+  guess.forEach(c=>{const d=document.createElement('div');d.className='small';d.style.background=c;colors.appendChild(d);});
+  const exactValue=document.createElement('div'); exactValue.className='scoreVal'; exactValue.textContent=exact;
+  const partialValue=document.createElement('div'); partialValue.className='scoreVal'; partialValue.textContent=partial;
+  left.append(number,colors); row.append(left,exactValue,partialValue); document.getElementById('history').prepend(row);
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));}
+function download(filename,content,type='text/html'){
+  const blob=new Blob([content],{type}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click(); URL.revokeObjectURL(a.href);
+}
+function downloadEditorConfig(){download('code-knacker-konfiguration.json',JSON.stringify(config,null,2),'application/json');}
+function loadEditorConfig(e){const file=e.target.files[0]; if(!file)return; const r=new FileReader(); r.onload=()=>{try{config=JSON.parse(r.result);sanitizeConfig();renderEditor();startGame();}catch(err){alert('Konfiguration konnte nicht geladen werden.');}}; r.readAsText(file);}
+function downloadPlayerApp(){const html=buildPlayerHtml(config);document.getElementById('exportCode').value=html;download('code-knacker-spiel.html',html);}
+function buildPlayerHtml(cfg){
+  const safe=JSON.stringify(cfg).replace(/</g,'\\u003c');
+  return `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Code-Knacker</title><style>${playerCss()}</style></head><body><div class="box"><h1>Code-Knacker</h1><div class="row"><label for="level">Stufe:</label><select id="level" onchange="startGame()"></select><button onclick="startGame()">Neues Spiel</button></div><div id="status" class="muted"></div></div><div class="box"><h2>Spiel</h2><div class="sectionTitle">Ratezeile</div><p class="gameHint">Klicke die Farben an, um die Farben in die grauen Felder zu platzieren. Klicke ein Feld in der Ratezeile an, um die Farbe zu entfernen.</p><div id="guess"></div><div class="sectionTitle">Farbauswahl</div><div id="palette"></div><button class="primary" onclick="checkGuess()">Versuch prüfen</button></div><div class="box"><h2>Versuche</h2><div class="attemptHeader"><div></div><div class="scoreHead">Richtig</div><div class="scoreHead">Falsch platziert</div></div><div id="history"></div></div><script>const config=${safe};${playerJs()}<\/script></body></html>`;
+}
+function playerCss(){return document.querySelector('style').textContent.replace(/textarea[\s\S]*?\}/,'');}
+function playerJs(){return `const defaultPalette=${JSON.stringify(defaultPalette)};${clamp.toString()}${sanitizeLevel.toString()}${sanitizeConfig.toString()}${renderLevelSelectPlayer.toString()}${startGame.toString()}${renderGuess.toString()}${renderPalette.toString()}${scoreGuess.toString()}${checkGuess.toString()}${addAttempt.toString()}document.addEventListener('DOMContentLoaded',()=>{sanitizeConfig();renderLevelSelectPlayer();startGame();});`.replace(/previewLevel/g,'level');}
+function renderLevelSelectPlayer(){const sel=document.getElementById('level');sel.innerHTML='';config.levels.forEach((l,i)=>{const o=document.createElement('option');o.value=i;o.textContent=l.name;sel.appendChild(o);});}
+renderEditor();startGame();
+</script>
+</body>
+</html>
